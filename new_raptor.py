@@ -23,7 +23,7 @@
 """
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QDate
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction, QMessageBox
+from qgis.PyQt.QtWidgets import QAction, QMessageBox, QTableWidgetItem
 
 from qgis.core import QgsProject, QgsFeature, QgsGeometry, QgsPoint
 
@@ -209,6 +209,8 @@ class NewRaptor:
            missing_layers.append("Raptor Nests")
         if not "Raptor Buffer" in map_layers:
            missing_layers.append("Raptor Buffer")
+        if not "Linear Buffer" in map_layers:
+           missing_layers.append("Linear Buffer")
         if missing_layers:
            msg = "The following layers are missing from this project\n"
            for lyr in missing_layers:
@@ -227,6 +229,7 @@ class NewRaptor:
             #cuando se toca ok y se cierra el dialogo
             lyrNests = QgsProject.instance().mapLayersByName("Raptor Nests")[0] #se pone este 0 porque puede haber dos layers con el mismo nombre
             lyrBuffer = QgsProject.instance().mapLayersByName("Raptor Buffer")[0]
+            lyrLinear = QgsProject.instance().mapLayersByName("Linear Buffer")[0]
             idxNestID = lyrNests.fields().indexOf("Nest_ID")
             valNestID = lyrNests.maximumValue(idxNestID) + 1
             valLat = self.dlg.spbLatitude.value()
@@ -257,6 +260,26 @@ class NewRaptor:
             lyrBuffer.reload()
             
             dlgTable = DlgTable()
+            dlgTable.setWindowTitle("Impacts Table for Nest {}".format(valNestID))
+            # Find linear projects that will be impacted and report them in the table
+            bb = buffer.boundingBox()
+            linears = lyrLinear.getFeatures(bb)#bb rectangulo para que no haya tanto valores en la tabla, toma solo una parte del mapa
+            for linear in linears:
+                valID = linear.attribute("Project") 
+                valType = linear.attribute("type") 
+                valDistance = linear.geometry().distance(geom)# distancia entre la linear buffer y el nest
+                if valDistance < valBuffer:
+                   #populate table with linear data
+                   row = dlgTable.tblImpacts.rowCount()
+                   dlgTable.tblImpacts.insertRow(row)
+                   dlgTable.tblImpacts.setItem(row, 0, QTableWidgetItem(str(valID)))
+                   dlgTable.tblImpacts.setItem(row, 1, QTableWidgetItem(valType))
+                   twi = QTableWidgetItem("{:4.5f}".format(valDistance))
+                   twi.setTextAlignment(QtCore.Qt.AlignRight)
+                   dlgTable.tblImpacts.setItem(row, 2, twi)
+                   
+            
+            dlgTable.tblImpacts.sortItems(2)
             dlgTable.show()
             dlgTable.exec_()
             
