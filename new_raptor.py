@@ -27,6 +27,8 @@ from qgis.PyQt.QtWidgets import QAction, QMessageBox
 
 from qgis.core import QgsProject, QgsFeature, QgsGeometry, QgsPoint
 
+from .impact_table import DlgTable
+
 # Initialize Qt resources from file resources.py
 from .resources import *
 # Import the code for the dialog
@@ -187,12 +189,13 @@ class NewRaptor:
 
         # Create the dialog with elements (after translation) and keep reference
         # Only create GUI ONCE in callback, so that it will only load when the plugin is started
+        #cuando se inicializa el dialogo por prmera vez
         if self.first_start == True:
             self.first_start = False
             self.dlg = NewRaptorDialog()
             self.dlg.cmbSpecies.currentTextChanged.connect(self.evt_cmbSpecies_changed)
             
-            
+         #sempre que se inicialza el dialogo   
         mc = self.iface.mapCanvas()
         self.dlg.spbLatitude.setValue(mc.center().y()) #me determina el centro e y se refiere a la latitud       
         self.dlg.spbLongitude.setValue(mc.center().x())
@@ -221,6 +224,7 @@ class NewRaptor:
         if result:
             # Do something useful here - delete the line containing pass and
             # substitute with your code.
+            #cuando se toca ok y se cierra el dialogo
             lyrNests = QgsProject.instance().mapLayersByName("Raptor Nests")[0] #se pone este 0 porque puede haber dos layers con el mismo nombre
             lyrBuffer = QgsProject.instance().mapLayersByName("Raptor Buffer")[0]
             idxNestID = lyrNests.fields().indexOf("Nest_ID")
@@ -251,6 +255,11 @@ class NewRaptor:
             ftrNest.setGeometry(buffer)
             pr.addFeatures([ftrNest])
             lyrBuffer.reload()
+            
+            dlgTable = DlgTable()
+            dlgTable.show()
+            dlgTable.exec_()
+            
         else:
             QMessageBox.information(self.dlg, "Message", "Should only run if cancelled")  
 
